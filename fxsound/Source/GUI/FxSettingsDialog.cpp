@@ -208,14 +208,7 @@ FxSettingsDialog::GeneralSettingsPane::GeneralSettingsPane() :
 										}
 										else
 										{
-											if (id == preferred_endpoint_.getNumItems() - 1)
-											{
-												FxController::getInstance().setPreferredOutput("", "Auto");
-											}
-											else
-											{
-												FxController::getInstance().setPreferredOutput("", "None");
-											}
+											FxController::getInstance().setPreferredOutput("", "None");
 										}
 									};
 	hide_help_tips_toggle_.setMouseCursor(MouseCursor::PointingHandCursor);
@@ -399,30 +392,18 @@ void FxSettingsDialog::GeneralSettingsPane::updateEndpointList()
 	for (auto endpoint : endpoints)
 	{
 		preferred_endpoint_.addItem(endpoint.deviceFriendlyName.c_str(), i);
-		if (endpoint.deviceNumChannel == 1)
-		{
-			preferred_endpoint_.setItemEnabled(i, false);
-		}
 		if (endpoint.pwszID == controller.getPreferredOutputId().toWideCharPointer())
 		{
 			pref_device_index = i;
 		}
 		i++;
 	}
-	preferred_endpoint_.addItem(TRANS("Newly connected device"), i);
-	auto auto_index = i++;
 	preferred_endpoint_.addItem(TRANS("None"), i);
-	auto none_index = i;
 
-	if (controller.getPreferredOutputName().equalsIgnoreCase(L"Auto"))
+	if (controller.getPreferredOutputName().equalsIgnoreCase(L"None"))
 	{
-		pref_device_index = auto_index;
+		pref_device_index = i;
 	}
-	else if (controller.getPreferredOutputName().equalsIgnoreCase(L"None"))
-	{
-		pref_device_index = none_index;
-	}
-
 	preferred_endpoint_.setSelectedId(pref_device_index, NotificationType::dontSendNotification);
 }
 
