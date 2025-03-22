@@ -1,3 +1,31 @@
+version 1.1.31.0
+----------------
+1. Fixed the unhandled exception and crash in the application after installation
+2. Notifications not displayed during output device change is fixed
+3. Correction in Swedish translation
+
+version 1.1.30.0
+----------------
+1. Fixed the issue of taskbar icon color not changing after application window restore
+2. Fixed a potential crash in changing volume/mute
+
+version 1.1.29.0
+----------------
+1. Build optimizations done to improve performance and reduce CPU utilization
+2. Crash identified in font loading is fixed
+3. Function call stack with line number will be added to the log on any exception causing application crash 
+4. FxSound window opens as topmost window on system tray icon click
+5. Settings file not found error is fixed
+6. Notifications will be displayed in custom notification theme. Notifications can be hidden from Settings.
+7. Corrections in Portuguese and Russian translations
+
+version 1.1.28.0
+----------------
+1. Feature added to connect to newly connected output device
+2. Debug logs are captured in log file
+3. Chinese (Traditional) and Korean translations updated
+4. Farsi/Persian language support added
+
 version 1.1.27.0
 ----------------
 1. Fixed the export presets bug which exported the current preset instead of the presets selected in the dialog

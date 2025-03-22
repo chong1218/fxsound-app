@@ -49,8 +49,10 @@ private:
 		{
 			auto& theme = dynamic_cast<FxTheme&>(LookAndFeel::getDefaultLookAndFeel());
 
-			error_message_.setText(TRANS("Oops! There's an issue with your playback device settings.\r\nBefore we can get started, please go through the "), NotificationType::dontSendNotification);
 			error_message_.setFont(theme.getNormalFont());
+			contact_message_.setFont(theme.getNormalFont());
+
+			error_message_.setText(TRANS("Oops! There's an issue with your playback device settings.\r\nBefore we can get started, please go through the "), NotificationType::dontSendNotification);
 			error_message_.setJustificationType(Justification::topLeft);
 			addAndMakeVisible(error_message_);
 
@@ -60,7 +62,6 @@ private:
 			addAndMakeVisible(error_link_);
 
 			contact_message_.setText(TRANS(" if you're still having problems."), NotificationType::dontSendNotification);
-			contact_message_.setFont(theme.getNormalFont());
 			contact_message_.setJustificationType(Justification::topLeft);
 			addAndMakeVisible(contact_message_);
 
@@ -168,6 +169,7 @@ FxController::FxController() : message_window_(L"FxSoundHotkeys", (WNDPROC) even
 
     free_plan_ = settings_.getBool("free_plan");
     hide_help_tooltips_ = settings_.getBool("hide_help_tooltips");
+	hide_notifications_ = settings_.getBool("hide_notifications");
     output_device_id_ = settings_.getString("output_device_id");
     output_device_name_ = settings_.getString("output_device_name");
 	max_user_presets_ = settings_.getInt("max_user_presets");
@@ -208,7 +210,7 @@ void FxController::config(const String& commandline)
     
     if (preset.isNotEmpty())
     {
-        settings_.setString("preset", preset, true);
+        settings_.setString("preset", preset);
     }
 
     if (view.isNotEmpty())
@@ -328,6 +330,8 @@ void FxController::init(FxMainWindow* main_window, FxSystemTrayView* system_tray
 		auto prev_version = settings_.getString("version");
         if (prev_version != app_version)
         {
+			RegDeleteTree(HKEY_CURRENT_USER, L"Software\\DFX");
+
             FxModel::getModel().pushMessage(" ", { TRANS("Click here to see what's new on this version!"), "https://www.fxsound.com/changelog" });			
             settings_.setString("version", app_version);
 			if (!prev_version.startsWith("1.1.2") && app_version.startsWith("1.1.2"))
@@ -442,13 +446,11 @@ void FxController::showMainWindow()
 {
 	if (main_window_ != nullptr)
 	{
-		if (!main_window_->isVisible())
-		{
-			main_window_->setVisible(true);
-            settings_.setBool("run_minimized", false);
-		}
-		main_window_->addToDesktop(ComponentPeer::windowAppearsOnTaskbar);
-		main_window_->toFront(true);
+		settings_.setBool("run_minimized", false);
+		main_window_->show();
+
+		auto power = FxModel::getModel().getPowerState();
+		main_window_->setIcon(power, audio_process_on_);
 
         if (survey_tip_)
         {
@@ -571,6 +573,8 @@ bool FxController::setPreset(int selected_preset)
         }
 	}
 
+	model.pushMessage(TRANS("Preset: ") + model.getPreset(selected_preset).name);
+
 	return true;
 }
 
@@ -642,6 +646,8 @@ void FxController::setOutput(int output, bool notify)
 			dfx_dsp_.powerOn(true);
 			audio_passthru_->mute(false);
         }
+
+		FxModel::getModel().pushMessage(TRANS("Output: ") + output_device_name_);
     }
 
 	FxModel::getModel().setSelectedOutput(output, selected_sound_device, notify);
@@ -1214,10 +1220,8 @@ LRESULT CALLBACK FxController::eventCallback(HWND hwnd, const UINT message, cons
 					{
 						preset_index = 0;
 					}
-					if (controller->setPreset(preset_index))
-					{
-						FxModel::getModel().pushMessage(TRANS("Preset: ") + FxModel::getModel().getPreset(preset_index).name);
-					}
+
+					controller->setPreset(preset_index);
 				}
 			}
 			if (w_param == CMD_PREVIOUS_PRESET && FxModel::getModel().getPowerState())
@@ -1234,10 +1238,8 @@ LRESULT CALLBACK FxController::eventCallback(HWND hwnd, const UINT message, cons
 					{
 						preset_index = preset_count - 1;
 					}
-					if (controller->setPreset(preset_index))
-					{
-						FxModel::getModel().pushMessage(TRANS("Preset: ") + FxModel::getModel().getPreset(preset_index).name);
-					}
+
+					controller->setPreset(preset_index);
 				}
 			}
 			if (w_param == CMD_NEXT_OUTPUT)
@@ -1518,6 +1520,17 @@ void FxController::setHelpTooltipsHidden(bool status)
     main_window_->repaint();
 }
 
+bool FxController::isNotificationsHidden()
+{
+	return hide_notifications_;
+}
+
+void FxController::setNotificationsHidden(bool status)
+{
+	hide_notifications_ = status;
+	settings_.setBool("hide_notifications", true);
+}
+
 String FxController::getLanguage() const
 {
     return language_;
@@ -1525,6 +1538,11 @@ String FxController::getLanguage() const
 
 void FxController::setLanguage(String language_code)
 {
+	if (language_code.isEmpty())
+	{
+		language_code = "en";
+	}
+
     language_ = language_code;
     settings_.setString("language", language_);
 
@@ -1626,8 +1644,12 @@ void FxController::setLanguage(String language_code)
 	{
 		LocalisedStrings::setCurrentMappings(new LocalisedStrings(String::createStringFromData(BinaryData::FxSound_ir_txt, BinaryData::FxSound_ir_txtSize), false));
 	}
-    auto& theme = dynamic_cast<FxTheme&>(LookAndFeel::getDefaultLookAndFeel());
-    theme.loadFont(language_);
+  
+	auto* theme = dynamic_cast<FxTheme*>(&LookAndFeel::getDefaultLookAndFeel());
+	if (theme != nullptr)
+	{
+		theme->loadFont(language_);
+	}
 
     if (main_window_ != nullptr)
     {
@@ -1722,7 +1744,7 @@ String FxController::getLanguageName(String language_code) const
 	}
 	else if (language_code.startsWithIgnoreCase("ar"))
 	{
-		return L"\u0639\u0631\u0628\u064a";
+		return L"\u0627\u0644\u0639\u0631\u0628\u064a\u0629";
 	}
 	else if (language_code.startsWithIgnoreCase("hr"))
 	{
