@@ -446,8 +446,13 @@ void FxController::showMainWindow()
 {
 	if (main_window_ != nullptr)
 	{
-		settings_.setBool("run_minimized", false);
-		main_window_->show();
+		if (!main_window_->isVisible())
+		{
+			main_window_->setVisible(true);
+            settings_.setBool("run_minimized", false);
+		}
+		main_window_->addToDesktop(ComponentPeer::windowAppearsOnTaskbar);
+		main_window_->toFront(true);
 
 		auto power = FxModel::getModel().getPowerState();
 		main_window_->setIcon(power, audio_process_on_);
@@ -1744,7 +1749,7 @@ String FxController::getLanguageName(String language_code) const
 	}
 	else if (language_code.startsWithIgnoreCase("ar"))
 	{
-		return L"\u0627\u0644\u0639\u0631\u0628\u064a\u0629";
+		return L"\u0639\u0631\u0628\u064a";
 	}
 	else if (language_code.startsWithIgnoreCase("hr"))
 	{
