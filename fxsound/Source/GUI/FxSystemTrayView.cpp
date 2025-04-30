@@ -27,8 +27,17 @@ const GUID FxSystemTrayView::trayIconGuid_ =
 FxSystemTrayView::FxSystemTrayView()
 {
     FxModel::getModel().addListener(this);
-
-    custom_notification_ = true;
+    auto os = SystemStats::getOperatingSystemType();
+    if (os == SystemStats::OperatingSystemType::Windows7 ||
+        os == SystemStats::OperatingSystemType::Windows8_0 ||
+        os == SystemStats::OperatingSystemType::Windows8_1)
+    {
+        custom_notification_ = true;
+    }
+    else
+    {
+        custom_notification_ = false;
+    }
 
     addToDesktop(0);
 
@@ -73,7 +82,7 @@ FxSystemTrayView::~FxSystemTrayView()
 
 void FxSystemTrayView::modelChanged(FxModel::Event model_event)
 {
-    if (!FxController::getInstance().isNotificationsHidden() && model_event == FxModel::Event::Notification)
+    if (model_event == FxModel::Event::Notification)
     {
         showNotification();
     }
